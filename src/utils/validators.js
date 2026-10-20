@@ -1,43 +1,46 @@
-export const required = (value) => { 
-  if (value === 0 || value === false) return null;
-  return value && String(value).trim() !== "" ? null : "Це поле є обов'язковим"; 
-}; 
+// src/utils/validators.js
 
-export const minLength = (min) => (value) => { 
-  return value && value.length < min ? `Мінімальна довжина ${min} символів` : null; 
-}; 
+export const required = (value) => {
+  if (!value || (typeof value === 'string' && value.trim() === '')) {
+    return "Обов'язкове поле";
+  }
+  return null;
+};
 
-export const maxLength = (max) => (value) => { 
-  return value && value.length > max ? `Максимальна довжина ${max} символів` : null; 
-}; 
-
-export const email = (value) => { 
+export const email = (value) => {
   if (!value) return null;
-  const stringValue = String(value).trim();
-  // Перевірка на базову структуру email (наявність хоча б одного символу до @, після @ і крапки в домені)
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+\$/; 
-  return !emailRegex.test(stringValue) ? "Введіть коректну email-адресу" : null; 
-}; 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(value)) {
+    return "Невірний формат електронної пошти";
+  }
+  return null;
+};
 
-export const composeValidators = (...validators) => (value) => { 
-  return validators.reduce((error, validator) => { 
-    return error || validator(value); 
-  }, null); 
-}; 
+// Функція для Individual Task 1: Аналіз надійності пароля
+export const passwordStrength = (password = '') => {
+  let score = 0;
+  const recommendations = [];
 
-export const minAge = (years) => (value) => { 
-  if (!value) return null; 
-  
-  const birthDate = new Date(value); 
-  if (isNaN(birthDate.getTime())) return "Некоректний формат дати";
+  const hasLower = /[a-zа-яіїєґ]/.test(password);
+  const hasUpper = /[A-ZА-ЯІЇЄҐ]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[^A-Za-zА-Яа-яІЇЄҐіїєґ0-9]/.test(password);
+  const isLongEnough = password.length > 12;
 
-  const today = new Date(); 
-  let age = today.getFullYear() - birthDate.getFullYear(); 
-  const monthDifference = today.getMonth() - birthDate.getMonth(); 
-  
-  if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) { 
-    age--; 
-  } 
-  
-  return age < years ? `Вам має бути щонайменше ${years} років` : null; 
+  if (hasLower) score++;
+  else recommendations.push("Додайте малі літери");
+
+  if (hasUpper) score++;
+  else recommendations.push("Додайте великі літери");
+
+  if (hasNumber) score++;
+  else recommendations.push("Додайте цифри");
+
+  if (hasSpecial) score++;
+  else recommendations.push("Додайте спеціальні символи");
+
+  if (isLongEnough) score++;
+  else recommendations.push("Збільште довжину до 12+ символів");
+
+  return { score, recommendations };
 };

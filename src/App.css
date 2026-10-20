@@ -95,3 +95,35 @@
   margin-left: auto;
   color: inherit;
 }
+
+/* --- Стилі для індикатора надійності пароля (Індивідуальне завдання 1) --- */
+.password-strength-container {
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.strength-bar {
+  height: 6px;
+  width: 100%;
+  background-color: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* Класи для різних рівнів надійності згідно з вимогами */
+.strength-weak {
+  /* 1-2 бали (додаткові селектори за потреби) */
+}
+
+.strength-medium {
+  /* 3 бали */
+}
+
+.strength-good {
+  /* 4 бали */
+}
+
+.strength-strong {
+  /* 5 балів */
+}
