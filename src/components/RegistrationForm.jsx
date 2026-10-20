@@ -1,172 +1,161 @@
 // src/components/RegistrationForm.jsx
 import React, { useState } from 'react';
-import { useForm } from '../hooks/useForm';
-import TextField from './TextField';
-import AsyncTextField from './AsyncTextField';
 import Toast from './Toast';
-import { required, minLength, minAge, composeValidators } from '../utils/validators';
-import { useAsyncValidation } from '../hooks/useAsyncValidation';
-import { checkPhoneAvailability } from '../services/phoneService';
+import { mockRegisterUser } from '../services/mockApi';
 
 const RegistrationForm = () => {
-  const [showToast, setShowToast] = useState(false);
-  const [phone, setPhone] = useState('');
-  const [phoneError, setPhoneError] = useState('');
+  const [values, setValues] = useState({
+    username: 'Ruslan',
+    surname: 'Semeniakhin',
+    email: 'test@gmail.com',
+    password: 'password123',
+    confirmPassword: 'password123',
+    birthDate: '1998-06-24'
+  });
 
-  // Підключаємо хук асинхронної валідації телефону з дебаунсингом (500 мс)
-  const { isValidating, asyncError, validate: validatePhoneAsync } = useAsyncValidation(
-    checkPhoneAvailability, 
-    500
-  );
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  const initialValues = {
-    username: '',
-    surname: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    birthDate: ''
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setValues(prev => ({ ...prev, [name]: value }));
   };
 
-  const validationRules = {
-    username: composeValidators(required, minLength(2)),
-    surname: composeValidators(required, minLength(2)),
-    email: (value) => {
-      if (!value) return "Це поле є обов'язковим";
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(String(value).trim())) {
-        return "Введіть коректну email-адресу";
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
+      const response = await mockRegisterUser(values);
+      if (response.status === 200) {
+        setToast({
+          show: true,
+          message: 'Реєстрацію завершено успішно',
+          type: 'success'
+        });
+        setValues({
+          username: '',
+          surname: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          birthDate: ''
+        });
       }
-      return null;
-    },
-    password: composeValidators(required, minLength(8)),
-    confirmPassword: (value) => {
-      if (!value) return "Це поле є обов'язковим";
-      return null;
-    },
-    birthDate: minAge(18)
-  };
-
-  // Обробник зміни телефону з викликом асинхронної перевірки
-  const handlePhoneChange = (e) => {
-    const value = e.target.value;
-    setPhone(value);
-    validatePhoneAsync(value, (errorMsg) => {
-      setPhoneError(errorMsg);
-    });
-  };
-
-  const handleSubmit = async (values) => {
-    // Перевіряємо, чи немає помилки в телефоні або чи завершилась перевірка
-    if (phoneError || isValidating) {
-      alert('Будь ласка, дочекайтеся завершення перевірки або виправте номер телефону');
-      return;
+    } catch (error) {
+      if (error.status === 400 && error.errors) {
+        setErrors(error.errors);
+      } else {
+        setToast({
+          show: true,
+          message: error.message || 'Виникла помилка сервера. Спробуйте пізніше',
+          type: 'error'
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const fullFormData = { ...values, phone };
-    await new Promise(resolve => setTimeout(resolve, 800));
-    console.log('Дані успішної реєстрації:', fullFormData);
-    setShowToast(true);
   };
-
-  const {
-    values,
-    errors,
-    touched,
-    isSubmitting,
-    handleChange,
-    handleBlur,
-    handleSubmit: onSubmit
-  } = useForm({ initialValues, validationRules, onSubmit: handleSubmit });
 
   return (
-    <div style={{ position: 'relative' }}>
-      <form onSubmit={onSubmit} className="registration-form" noValidate>
+    <div style={{ maxWidth: '480px', margin: '20px auto', padding: '20px', background: '#fff', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', position: 'relative' }}>
+      <form onSubmit={handleSubmit} className="registration-form" noValidate>
         <h2>Реєстрація користувача</h2>
         
-        <TextField
-          label="Ім'я"
-          name="username"
-          value={values.username}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={touched.username && errors.username}
-        />
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Ім'я</label>
+          <input
+            type="text"
+            name="username"
+            value={values.username}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+          />
+          {errors.username && <span style={{ color: 'red', fontSize: '12px' }}>{errors.username}</span>}
+        </div>
 
-        <TextField
-          label="Прізвище"
-          name="surname"
-          value={values.surname}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={touched.surname && errors.surname}
-        />
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Прізвище</label>
+          <input
+            type="text"
+            name="surname"
+            value={values.surname}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+          />
+        </div>
         
-        <TextField
-          label="Електронна пошта"
-          name="email"
-          type="email"
-          value={values.email}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={touched.email && errors.email}
-        />
-        
-        {/* Інтегроване асинхронне поле телефону з дебаунсингом та індикатором ⏳ */}
-        <AsyncTextField
-          label="Номер телефону"
-          name="phone"
-          value={phone}
-          onChange={handlePhoneChange}
-          isValidating={isValidating}
-          error={phoneError || asyncError}
-          placeholder="+380501234567"
-        />
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Електронна пошта</label>
+          <input
+            type="email"
+            name="email"
+            value={values.email}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+          />
+          {errors.email && <span style={{ color: 'red', fontSize: '12px' }}>{errors.email}</span>}
+        </div>
 
-        <TextField
-          label="Пароль"
-          name="password"
-          type="password"
-          value={values.password}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={touched.password && errors.password}
-        />
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Пароль</label>
+          <input
+            type="password"
+            name="password"
+            value={values.password}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+          />
+        </div>
 
-        <TextField
-          label="Підтвердження паролю"
-          name="confirmPassword"
-          type="password"
-          value={values.confirmPassword}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={touched.confirmPassword && errors.confirmPassword}
-        />
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Підтвердження паролю</label>
+          <input
+            type="password"
+            name="confirmPassword"
+            value={values.confirmPassword}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+          />
+        </div>
 
-        <TextField
-          label="Дата народження"
-          name="birthDate"
-          type="date"
-          value={values.birthDate}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          error={touched.birthDate && errors.birthDate}
-        />
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Дата народження</label>
+          <input
+            type="date"
+            name="birthDate"
+            value={values.birthDate}
+            onChange={handleChange}
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+          />
+        </div>
         
         <button 
           type="submit" 
-          disabled={isSubmitting || isValidating}
-          className="submit-button"
+          disabled={isSubmitting}
+          style={{
+            width: '100%',
+            padding: '10px',
+            backgroundColor: isSubmitting ? '#90caf9' : '#1976d2',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            fontWeight: 'bold',
+            marginTop: '10px'
+          }}
         >
           {isSubmitting ? 'Реєстрація...' : 'Зареєструватися'}
         </button>
       </form>
 
-      {showToast && (
+      {toast.show && (
         <Toast 
-          message="Реєстрація успішна!" 
-          type="success" 
-          onClose={() => setShowToast(false)} 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast({ ...toast, show: false })} 
         />
       )}
     </div>
