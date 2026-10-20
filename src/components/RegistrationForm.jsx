@@ -1,11 +1,23 @@
+// src/components/RegistrationForm.jsx
 import React, { useState } from 'react';
 import { useForm } from '../hooks/useForm';
 import TextField from './TextField';
+import AsyncTextField from './AsyncTextField';
 import Toast from './Toast';
 import { required, minLength, minAge, composeValidators } from '../utils/validators';
+import { useAsyncValidation } from '../hooks/useAsyncValidation';
+import { checkPhoneAvailability } from '../services/phoneService';
 
 const RegistrationForm = () => {
   const [showToast, setShowToast] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
+  // Підключаємо хук асинхронної валідації телефону з дебаунсингом (500 мс)
+  const { isValidating, asyncError, validate: validatePhoneAsync } = useAsyncValidation(
+    checkPhoneAvailability, 
+    500
+  );
 
   const initialValues = {
     username: '',
@@ -35,9 +47,25 @@ const RegistrationForm = () => {
     birthDate: minAge(18)
   };
 
+  // Обробник зміни телефону з викликом асинхронної перевірки
+  const handlePhoneChange = (e) => {
+    const value = e.target.value;
+    setPhone(value);
+    validatePhoneAsync(value, (errorMsg) => {
+      setPhoneError(errorMsg);
+    });
+  };
+
   const handleSubmit = async (values) => {
+    // Перевіряємо, чи немає помилки в телефоні або чи завершилась перевірка
+    if (phoneError || isValidating) {
+      alert('Будь ласка, дочекайтеся завершення перевірки або виправте номер телефону');
+      return;
+    }
+
+    const fullFormData = { ...values, phone };
     await new Promise(resolve => setTimeout(resolve, 800));
-    console.log('Дані успішної реєстрації:', values);
+    console.log('Дані успішної реєстрації:', fullFormData);
     setShowToast(true);
   };
 
@@ -84,6 +112,17 @@ const RegistrationForm = () => {
           error={touched.email && errors.email}
         />
         
+        {/* Інтегроване асинхронне поле телефону з дебаунсингом та індикатором ⏳ */}
+        <AsyncTextField
+          label="Номер телефону"
+          name="phone"
+          value={phone}
+          onChange={handlePhoneChange}
+          isValidating={isValidating}
+          error={phoneError || asyncError}
+          placeholder="+380501234567"
+        />
+
         <TextField
           label="Пароль"
           name="password"
@@ -116,7 +155,7 @@ const RegistrationForm = () => {
         
         <button 
           type="submit" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || isValidating}
           className="submit-button"
         >
           {isSubmitting ? 'Реєстрація...' : 'Зареєструватися'}
